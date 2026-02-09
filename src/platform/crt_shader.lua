@@ -1,6 +1,14 @@
 -- src/platform/crt_shader.lua  CRT simulation shader + presets
 local CRT = {}
 
+-- ============================================================
+-- Shared distortion constant (must match GLSL curve() exactly)
+-- ============================================================
+-- The barrel distortion coefficient applied as:
+--   uv_centered *= 1.0 + CURVE_K * r2 * enableCurve * intensity
+-- where r2 = x*x + y*y in centered (-1..1) space.
+CRT.CURVE_K = 0.15
+
 -- Single-pass CRT shader: scanlines, vignette, shadow mask, barrel distortion, noise
 local SHADER_CODE = [[
 extern float u_time;
@@ -11,7 +19,7 @@ extern float u_enableCurve;   // 0 or 1
 extern float u_enableMask;    // 0 or 1
 extern float u_enableNoise;   // 0 or 1
 
-// Barrel distortion
+// Barrel distortion — coefficient MUST match CRT.CURVE_K in Lua
 vec2 curve(vec2 uv) {
     uv = uv * 2.0 - 1.0;
     float r2 = uv.x*uv.x + uv.y*uv.y;
@@ -119,6 +127,43 @@ function CRT.send(intensity, internalW, internalH, screenW, screenH)
     CRT.shader:send("u_enableCurve", CRT.enableCurve)
     CRT.shader:send("u_enableMask",  CRT.enableMask)
     CRT.shader:send("u_enableNoise", CRT.enableNoise)
+end
+
+-- ============================================================
+-- Lua-side distortion queries (for mouse inverse mapping)
+-- ============================================================
+
+-- Is CRT barrel curvature currently active?
+function CRT.isCurvatureEnabled()
+    if not CRT.enabled then return false end
+    if CRT.enableCurve < 0.5 then return false end
+    local Config = require("src.config")
+    local preset = Config.CRT_PRESETS[Config.CRT_INDEX]
+    if preset and preset.intensity < 0.01 then return false end
+    return true
+end
+
+-- Effective curve strength = CURVE_K * enableCurve * intensity
+function CRT.getEffectiveCurveAmount()
+    if not CRT.enabled then return 0 end
+    local Config = require("src.config")
+    local preset = Config.CRT_PRESETS[Config.CRT_INDEX]
+    local intensity = preset and preset.intensity or 0
+    return CRT.CURVE_K * CRT.enableCurve * intensity
+end
+
+function CRT.getParams()
+    local Config = require("src.config")
+    local preset = Config.CRT_PRESETS[Config.CRT_INDEX]
+    return {
+        enabled       = CRT.enabled,
+        intensity     = preset and preset.intensity or 0,
+        curveK        = CRT.CURVE_K,
+        enableCurve   = CRT.enableCurve,
+        enableMask    = CRT.enableMask,
+        enableNoise   = CRT.enableNoise,
+        effectiveCurve = CRT.getEffectiveCurveAmount(),
+    }
 end
 
 return CRT

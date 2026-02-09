@@ -56,10 +56,13 @@ end
 function App.keypressed(key)
     Input.keypressed(key)
 
+    local shift = love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift")
+
     -- Global keys
     if key == "f1" then
         if mode == Config.MODE_GAME then
             mode = Config.MODE_EDITOR
+            Video.setEditorCurvatureOverride(true)
         else
             -- Apply edits before switching back
             local SE = require("src.editor.sprite_editor")
@@ -67,10 +70,20 @@ function App.keypressed(key)
             local TE = require("src.editor.tile_editor")
             TE.applyTile()
             mode = Config.MODE_GAME
+            Video.setEditorCurvatureOverride(false)
         end
         return
     elseif key == "f2" then
-        Video.toggleCRT()
+        if shift then
+            -- Shift+F2: toggle editor curvature override
+            Video.toggleEditorCurve()
+            -- Re-apply if we're in editor
+            if mode == Config.MODE_EDITOR then
+                Video.setEditorCurvatureOverride(true)
+            end
+        else
+            Video.toggleCRT()
+        end
         return
     elseif key == "f3" then
         Config.DEBUG_OVERLAY = not Config.DEBUG_OVERLAY
@@ -80,6 +93,9 @@ function App.keypressed(key)
         return
     elseif key == "f5" then
         Video.cycleResolution()
+        return
+    elseif key == "f7" then
+        Video.mouseDebug = not Video.mouseDebug
         return
     elseif key == "f12" then
         helpVisible = not helpVisible
@@ -159,13 +175,15 @@ function App.drawHelp()
 
     local h = Palette.get(4)
     local lines = {
-        "F1     TOGGLE GAME/EDITOR",
-        "F2     TOGGLE CRT SHADER",
-        "F3     DEBUG OVERLAY",
-        "F4     CYCLE CRT PRESET",
-        "F5     CYCLE RESOLUTION",
-        "F6     RELOAD LEVEL",
-        "F12    THIS HELP",
+        "F1      TOGGLE GAME/EDITOR",
+        "F2      TOGGLE CRT SHADER",
+        "SHFT+F2 EDITOR CURVATURE",
+        "F3      DEBUG OVERLAY",
+        "F4      CYCLE CRT PRESET",
+        "F5      CYCLE RESOLUTION",
+        "F6      RELOAD LEVEL",
+        "F7      MOUSE DEBUG",
+        "F12     THIS HELP",
         "",
         "=== GAME ===",
         "ARROWS MOVE",
@@ -178,7 +196,6 @@ function App.drawHelp()
         "R.CLK  ERASE TILE",
         "M.BTN  PAN CAMERA",
         "DEL    DELETE OBJECT",
-        "ARROWS NUDGE/SCROLL",
         "CTRL+Z UNDO  CTRL+Y REDO",
         "CTRL+S SAVE",
     }
