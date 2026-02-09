@@ -1,0 +1,19 @@
+# LOVE2D save directory (user data, not source)
+save/
+
+# OS junk
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# LOVE2D distribution builds
+*.love
+*.exe
+*.app
