@@ -40,7 +40,9 @@ Config.SAMPLE_RATE = 22050
 Config.BIT_DEPTH   = 16
 
 -- App modes
-Config.MODE_GAME   = "game"
+Config.MODE_BOOT   = "boot"
+Config.MODE_CART   = "cart"
+Config.MODE_GAME   = "game"     -- used internally by demo_game
 Config.MODE_EDITOR = "editor"
 
 -- Debug
@@ -54,5 +56,11 @@ Config.LEVEL_VERSION  = 1
 
 -- Undo
 Config.MAX_UNDO = 40
+
+-- Cartridge system
+Config.CARTS_DIR          = "cartridges"
+Config.CART_SAVE_DIR      = "save/carts"
+Config.DEFAULT_LEVELS_DIR = "save/levels"
+Config.CONTENT_SAVE_PATH  = "save/content.lua"
 
 return Config

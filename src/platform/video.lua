@@ -246,30 +246,4 @@ function Video.setEditorCurvatureOverride(isEditor)
     end
 end
 
--- ============================================================
--- TODO: Next Phase — Cartridges + Boot Menu
--- ============================================================
--- Planned architecture for cartridge system:
---
--- Directory layout:
---   cartridges/<game_name>/
---     main.lua       -- entry point, receives engine API table
---     content.lua    -- sprites, tiles, sfx, music as Lua tables
---     levels/        -- level files (same format as save/levels/)
---
--- Boot menu:
---   - On startup, scan cartridges/ for subdirectories
---   - Display a selection screen (Atari-styled, pixel font, CRT)
---   - Selected cartridge loads its content.lua, then runs main.lua
---   - Provide a sandboxed API table to the cartridge (sprites, ecs,
---     audio, input, video dimensions, etc.) — no raw love.* access
---   - "Reset" key (e.g. Escape) returns to boot menu
---
--- Implementation notes:
---   - Cartridge main.lua should export { load, update, draw, keypressed }
---   - Engine manages the love.* lifecycle; cartridge only sees the API
---   - Editor can target a cartridge directory for save/load paths
---   - Content registration (sprites/tiles) scoped per cartridge
--- ============================================================
-
 return Video

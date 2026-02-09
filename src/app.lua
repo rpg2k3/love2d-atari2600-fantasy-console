@@ -1,32 +1,42 @@
--- src/app.lua  Boot + state switching (game <-> editor)
-local Config    = require("src.config")
-local Video     = require("src.platform.video")
-local Input     = require("src.util.input")
-local PixelFont = require("src.util.pixelfont")
-local Palette   = require("src.gfx.palette")
-local Music     = require("src.audio.music")
+-- src/app.lua  Boot + cartridge + state switching (boot <-> cart <-> editor)
+local Config      = require("src.config")
+local Video       = require("src.platform.video")
+local Input       = require("src.util.input")
+local PixelFont   = require("src.util.pixelfont")
+local Palette     = require("src.gfx.palette")
+local Music       = require("src.audio.music")
 
-local DemoGame = require("src.game.demo_game")
-local Editor   = require("src.editor.editor_app")
+local CartManager = require("src.os.cart_manager")
+local BootMenu    = require("src.os.boot_menu")
+local Editor      = require("src.editor.editor_app")
 
 local App = {}
 
-local mode = Config.MODE_GAME  -- "game" or "editor"
+local state       = Config.MODE_BOOT  -- "boot", "cart", "editor"
 local helpVisible = false
+local activeCart   = nil   -- cart module with load/update/draw/keypressed/unload
 
 function App.load()
     PixelFont.init()
     Video.init()
-    DemoGame.init()
+    BootMenu.init()
     Editor.init()
 end
 
 function App.update(dt)
     Video.update(dt)
 
-    if mode == Config.MODE_GAME then
-        DemoGame.update(dt)
-    else
+    if state == Config.MODE_BOOT then
+        BootMenu.update(dt)
+        local selected = BootMenu.getSelected()
+        if selected then
+            App.startCart(selected)
+        end
+    elseif state == Config.MODE_CART then
+        if activeCart and activeCart.update then
+            activeCart.update(dt)
+        end
+    elseif state == Config.MODE_EDITOR then
         Editor.update(dt)
     end
 end
@@ -34,9 +44,13 @@ end
 function App.draw()
     Video.beginFrame()
 
-    if mode == Config.MODE_GAME then
-        DemoGame.draw()
-    else
+    if state == Config.MODE_BOOT then
+        BootMenu.draw()
+    elseif state == Config.MODE_CART then
+        if activeCart and activeCart.draw then
+            activeCart.draw()
+        end
+    elseif state == Config.MODE_EDITOR then
         Editor.draw()
     end
 
@@ -53,32 +67,41 @@ function App.draw()
     Video.endFrame()
 end
 
+-- ============================================================
+-- Cart lifecycle
+-- ============================================================
+function App.startCart(cartInfo)
+    local cartMod = CartManager.loadCart(cartInfo)
+    if cartMod then
+        activeCart = cartMod
+        state = Config.MODE_CART
+    end
+    BootMenu.clearSelection()
+end
+
+function App.stopCart()
+    if activeCart and activeCart.unload then
+        activeCart.unload()
+    end
+    CartManager.unloadCart()
+    activeCart = nil
+    state = Config.MODE_BOOT
+    BootMenu.refresh()
+end
+
+-- ============================================================
+-- Input
+-- ============================================================
 function App.keypressed(key)
     Input.keypressed(key)
 
     local shift = love.keyboard.isDown("lshift") or love.keyboard.isDown("rshift")
 
-    -- Global keys
-    if key == "f1" then
-        if mode == Config.MODE_GAME then
-            mode = Config.MODE_EDITOR
-            Video.setEditorCurvatureOverride(true)
-        else
-            -- Apply edits before switching back
-            local SE = require("src.editor.sprite_editor")
-            SE.applyGrid()
-            local TE = require("src.editor.tile_editor")
-            TE.applyTile()
-            mode = Config.MODE_GAME
-            Video.setEditorCurvatureOverride(false)
-        end
-        return
-    elseif key == "f2" then
+    -- Global F-keys (work in all states)
+    if key == "f2" then
         if shift then
-            -- Shift+F2: toggle editor curvature override
             Video.toggleEditorCurve()
-            -- Re-apply if we're in editor
-            if mode == Config.MODE_EDITOR then
+            if state == Config.MODE_EDITOR then
                 Video.setEditorCurvatureOverride(true)
             end
         else
@@ -100,18 +123,46 @@ function App.keypressed(key)
     elseif key == "f12" then
         helpVisible = not helpVisible
         return
-    elseif key == "escape" then
-        if helpVisible then
-            helpVisible = false
-            return
-        end
     end
 
-    -- Pass to active mode
-    if mode == Config.MODE_EDITOR then
+    -- Escape closes help in any state
+    if key == "escape" and helpVisible then
+        helpVisible = false
+        return
+    end
+
+    -- State-specific keys
+    if state == Config.MODE_BOOT then
+        BootMenu.keypressed(key)
+
+    elseif state == Config.MODE_CART then
+        if key == "f1" then
+            -- Switch to editor
+            state = Config.MODE_EDITOR
+            Video.setEditorCurvatureOverride(true)
+            return
+        elseif key == "escape" then
+            -- Return to boot menu
+            App.stopCart()
+            return
+        end
+        -- Pass to cart
+        if activeCart and activeCart.keypressed then
+            activeCart.keypressed(key)
+        end
+
+    elseif state == Config.MODE_EDITOR then
+        if key == "f1" then
+            -- Apply edits and return to cart
+            local SE = require("src.editor.sprite_editor")
+            SE.applyGrid()
+            local TE = require("src.editor.tile_editor")
+            TE.applyTile()
+            state = Config.MODE_CART
+            Video.setEditorCurvatureOverride(false)
+            return
+        end
         Editor.keypressed(key)
-    else
-        DemoGame.keypressed(key)
     end
 end
 
@@ -136,30 +187,37 @@ function App.endFrame()
     Input.endMouseFrame()
 end
 
+-- ============================================================
 -- Debug overlay
+-- ============================================================
 function App.drawDebug()
     local iw = Video.getInternalWidth()
-    local ih = Video.getInternalHeight()
     local vx, vy, vw, vh = Video.getViewportRect()
 
-    -- Semi-transparent background
     love.graphics.setColor(0, 0, 0, 0.7)
-    love.graphics.rectangle("fill", iw - 66, 0, 66, 42)
+    love.graphics.rectangle("fill", iw - 66, 0, 66, 49)
 
     local c = Palette.get(19)
     local y = 1
     PixelFont.print("FPS:" .. love.timer.getFPS(), iw - 64, y, 1, c[1], c[2], c[3])
     y = y + 7
-    PixelFont.print("RES:" .. iw .. "X" .. ih, iw - 64, y, 1, c[1], c[2], c[3])
+    PixelFont.print("RES:" .. iw .. "X" .. Video.getInternalHeight(), iw - 64, y, 1, c[1], c[2], c[3])
     y = y + 7
     PixelFont.print(Video.getCRTLabel(), iw - 64, y, 1, c[1], c[2], c[3])
     y = y + 7
-    PixelFont.print("MODE:" .. string.upper(mode), iw - 64, y, 1, c[1], c[2], c[3])
+    PixelFont.print("MODE:" .. string.upper(state), iw - 64, y, 1, c[1], c[2], c[3])
     y = y + 7
     PixelFont.print(string.format("VP:%d,%d", vw, vh), iw - 64, y, 1, c[1], c[2], c[3])
+    y = y + 7
+    local cartName = CartManager.getCurrentName()
+    if cartName then
+        PixelFont.print(string.sub(cartName, 1, 10), iw - 64, y, 1, c[1], c[2], c[3])
+    end
 end
 
+-- ============================================================
 -- Help overlay
+-- ============================================================
 function App.drawHelp()
     local iw = Video.getInternalWidth()
     local ih = Video.getInternalHeight()
@@ -175,32 +233,31 @@ function App.drawHelp()
 
     local h = Palette.get(4)
     local lines = {
-        "F1      TOGGLE GAME/EDITOR",
-        "F2      TOGGLE CRT SHADER",
-        "SHFT+F2 EDITOR CURVATURE",
+        "F1      CART/EDITOR",
+        "F2      CRT SHADER",
         "F3      DEBUG OVERLAY",
-        "F4      CYCLE CRT PRESET",
-        "F5      CYCLE RESOLUTION",
-        "F6      RELOAD LEVEL",
-        "F7      MOUSE DEBUG",
+        "F4      CRT PRESET",
+        "F5      RESOLUTION",
         "F12     THIS HELP",
+        "ESC     BACK TO BOOT",
         "",
         "=== GAME ===",
-        "ARROWS MOVE",
-        "Z      JUMP",
+        "ARROWS  MOVE",
+        "Z       JUMP",
         "",
-        "=== LEVEL EDITOR ===",
-        "TAB    TILE/OBJECT MODE",
-        "G      TOGGLE SNAP",
-        "L.CLK  PLACE/SELECT/DRAG",
-        "R.CLK  ERASE TILE",
-        "M.BTN  PAN CAMERA",
-        "DEL    DELETE OBJECT",
-        "CTRL+Z UNDO  CTRL+Y REDO",
-        "CTRL+S SAVE",
+        "=== EDITOR ===",
+        "TAB     TILE/OBJ MODE",
+        "G       SNAP ON/OFF",
+        "L.CLK   PLACE/DRAG",
+        "R.CLK   ERASE",
+        "M.BTN   PAN",
+        "DEL     DELETE",
+        "CTRL+Z  UNDO",
+        "CTRL+Y  REDO",
+        "CTRL+S  SAVE",
     }
     for _, line in ipairs(lines) do
-        if line:sub(1,3) == "===" then
+        if line:sub(1, 3) == "===" then
             PixelFont.print(line, x, y, 1, c[1], c[2], c[3])
         else
             PixelFont.print(line, x, y, 1, h[1], h[2], h[3])

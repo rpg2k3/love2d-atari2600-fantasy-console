@@ -43,7 +43,7 @@ local PLAYER_H  = 8
 -- Content registration (sprites, tiles, music)
 -- ============================================================
 local function registerContent()
-    local saved = Serialize.load("save/content.lua")
+    local saved = Serialize.load(Config.CONTENT_SAVE_PATH)
     local content = saved or Content
 
     if content.sprites then

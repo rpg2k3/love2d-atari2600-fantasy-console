@@ -4,6 +4,7 @@ local Input      = require("src.util.input")
 local Video      = require("src.platform.video")
 local PixelFont  = require("src.util.pixelfont")
 local Serialize  = require("src.util.serialize")
+local Config     = require("src.config")
 
 local SpriteEditor = require("src.editor.sprite_editor")
 local SfxEditor    = require("src.editor.sfx_editor")
@@ -103,9 +104,10 @@ function Editor.saveAll()
         content.tilemap = TileEditor.tilemap:export()
     end
 
-    love.filesystem.createDirectory("save")
-    Serialize.save("save/content.lua", content)
-    print("[EDITOR] Content saved!")
+    local saveDir = Config.CONTENT_SAVE_PATH:match("(.*)/")
+    if saveDir then love.filesystem.createDirectory(saveDir) end
+    Serialize.save(Config.CONTENT_SAVE_PATH, content)
+    print("[EDITOR] Content saved to " .. Config.CONTENT_SAVE_PATH)
 end
 
 return Editor
