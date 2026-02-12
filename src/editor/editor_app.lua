@@ -1,10 +1,13 @@
 -- src/editor/editor_app.lua  Editor mode router (tabs: Sprite, SFX, Music, Tiles, Level)
-local UI         = require("src.util.ui")
-local Input      = require("src.util.input")
-local Video      = require("src.platform.video")
-local PixelFont  = require("src.util.pixelfont")
-local Serialize  = require("src.util.serialize")
-local Config     = require("src.config")
+local UI          = require("src.util.ui")
+local Input       = require("src.util.input")
+local Video       = require("src.platform.video")
+local PixelFont   = require("src.util.pixelfont")
+local Serialize   = require("src.util.serialize")
+local Config      = require("src.config")
+local Palette     = require("src.gfx.palette")
+local CartManager = require("src.os.cart_manager")
+local Packager    = require("src.os.cart_packager")
 
 local SpriteEditor = require("src.editor.sprite_editor")
 local SfxEditor    = require("src.editor.sfx_editor")
@@ -19,6 +22,11 @@ local tabs = { SpriteEditor, SfxEditor, MusicEditor, TileEditor, LevelEditor }
 local currentTab = 1
 local initialized = false
 
+-- Status toast
+local editorStatus      = nil
+local editorStatusTimer = 0
+local EDITOR_STATUS_DUR = 3
+
 function Editor.init()
     if initialized then return end
     for _, t in ipairs(tabs) do
@@ -30,6 +38,13 @@ end
 function Editor.update(dt)
     local tab = tabs[currentTab]
     if tab and tab.update then tab.update(dt) end
+    if editorStatusTimer > 0 then
+        editorStatusTimer = editorStatusTimer - dt
+        if editorStatusTimer <= 0 then
+            editorStatus      = nil
+            editorStatusTimer = 0
+        end
+    end
 end
 
 function Editor.draw()
@@ -49,22 +64,51 @@ function Editor.draw()
     local tab = tabs[currentTab]
     if tab and tab.draw then tab.draw(tabH + 1) end
 
-    -- Bottom status (only for non-level tabs; level editor draws its own)
-    if currentTab ~= 5 then
+    -- Status toast
+    if editorStatus then
+        local sc = Palette.get(15)
+        PixelFont.print(editorStatus, 8, ih - 16, 1, sc[1], sc[2], sc[3])
+    end
+
+    -- Bottom status (skip for level editor and music editor, which draw their own)
+    if currentTab ~= 5 and currentTab ~= 3 then
         local c = {0.6, 0.6, 0.6, 1}
-        PixelFont.print("F1:GAME  CTRL+S:SAVE", 1, ih - 7, 1, c[1], c[2], c[3], c[4])
+        PixelFont.print("F1:GAME ^S:SAVE ^E:EXPORT", 1, ih - 7, 1, c[1], c[2], c[3], c[4])
     end
 end
 
 function Editor.keypressed(key)
-    -- Ctrl+S: if on level tab, delegate to level editor; otherwise save content
     local ctrl = love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl")
+
+    -- Ctrl+E: export current cart with save overrides
+    if ctrl and key == "e" then
+        local cur = CartManager.getCurrent()
+        if cur then
+            Editor.saveAll()
+            local result = Packager.exportCart(cur.dir, { withSaveOverrides = true })
+            if result.ok then
+                editorStatus      = "EXPORTED: " .. string.upper(result.filename)
+                editorStatusTimer = EDITOR_STATUS_DUR
+            else
+                editorStatus      = "EXPORT ERR: " .. (result.err or "?")
+                editorStatusTimer = EDITOR_STATUS_DUR
+            end
+        else
+            editorStatus      = "NO CART LOADED"
+            editorStatusTimer = EDITOR_STATUS_DUR
+        end
+        return true
+    end
+
+    -- Ctrl+S: if on level tab, delegate to level editor; otherwise save content
     if ctrl and key == "s" then
         if currentTab == 5 then
             -- Level editor handles its own save
             LevelEditor.keypressed(key)
         else
             Editor.saveAll()
+            editorStatus      = "SAVED!"
+            editorStatusTimer = EDITOR_STATUS_DUR
         end
         return true
     end

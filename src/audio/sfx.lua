@@ -6,6 +6,17 @@ local SFX = {}
 -- Cache of generated sources
 local cache = {}
 
+-- Master volume multiplier (set by system settings)
+local masterVolume = 1.0
+
+function SFX.setMasterVolume(v)
+    masterVolume = math.max(0, math.min(1, v))
+end
+
+function SFX.getMasterVolume()
+    return masterVolume
+end
+
 -- SFX preset definitions
 SFX.presets = {
     jump = {
@@ -55,12 +66,14 @@ function SFX.play(name)
     local src = getSource(name)
     if not src then return end
     src:stop()
+    src:setVolume(masterVolume)
     src:play()
 end
 
 -- Play from custom params (not cached)
 function SFX.playCustom(params)
     local src = Synth.newSource(params)
+    src:setVolume(masterVolume)
     src:play()
     return src
 end

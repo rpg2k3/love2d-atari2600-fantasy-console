@@ -35,3 +35,20 @@ end
 function love.resize(w, h)
     App.resize(w, h)
 end
+
+-- Gamepad callbacks
+function love.gamepadpressed(joystick, button)
+    App.gamepadpressed(joystick, button)
+end
+
+function love.gamepadreleased(joystick, button)
+    App.gamepadreleased(joystick, button)
+end
+
+function love.joystickadded(joystick)
+    App.joystickadded(joystick)
+end
+
+function love.joystickremoved(joystick)
+    App.joystickremoved(joystick)
+end

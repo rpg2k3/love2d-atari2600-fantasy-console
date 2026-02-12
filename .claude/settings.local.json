@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Atari 2600 fantasy console engine + editors\n\nComplete LOVE 11.5 project \\(34 Lua files, zero dependencies\\):\n- CRT shader pipeline \\(scanlines, vignette, mask, curvature, noise\\)\n- 4:3 strict aspect ratio with nearest-neighbor scaling\n- 32-color Atari-ish palette, 3x5 procedural pixel font\n- ECS with integer entity IDs, component pools, query iterator\n- Procedural audio: synth \\(square/tri/saw/sine/noise\\), SFX presets, step sequencer\n- Sprite/tile system from palette-indexed grids\n- Editors: sprite, SFX, music, tile definition, level \\(object placement + tilemap\\)\n- Level editor v1: place/select/drag/resize/delete objects, undo/redo, multi-level files\n- Demo platformer with player, coins, enemies, triggers, checkpoint system\n- Runtime level loading from save/levels/ with F6 hot-reload\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix CRT-aware mouse mapping for editor accuracy\n\nAdd inverse barrel distortion so mouse clicks hit correct internal\npixels even with CRT curvature enabled. Extract shared distortion\nconstant \\(CURVE_K=0.15\\) matching GLSL, implement iterative Newton\ninverse in Lua, and update screenToInternal\\(\\) to apply it.\n\n- Editor defaults to curvature OFF \\(Shift+F2 to re-enable\\)\n- F7 toggles mouse debug crosshair overlay\n- Add cartridge system TODO block for next phase\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(where:*)",
+      "Bash(dir /s /b \"C:\\\\Program Files\\\\LOVE\\\\love.exe\")",
+      "Bash(dir /s /b \"C:\\\\Program Files \\(x86\\)\\\\LOVE\\\\love.exe\")",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c:*)",
+      "Bash(luajit:*)",
+      "Bash(git status:*)",
+      "Bash(timeout 5:*)",
+      "Bash(for f in src/os/settings.lua src/os/cart_info.lua src/os/boot_menu.lua src/gfx/palette.lua src/audio/sfx.lua src/config.lua src/app.lua)",
+      "Bash(do echo -n \"$f: \")",
+      "Bash(done)",
+      "Bash(ls -la \"D:\\\\LOVE2d\\\\_project\\\\_fantasyconsole Atari2600\\\\cartridges\\\\adventure_clone\"\" && ls -la \"D:LOVE2d_project_fantasyconsole Atari2600cartridgesadventure_clonelevels\"\")",
+      "Bash(lua54:*)",
+      "Bash(lua:*)",
+      "Bash(love:*)"
+    ]
+  }
+}

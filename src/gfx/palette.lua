@@ -53,15 +53,69 @@ local COLORS_RAW = {
     {232, 160, 252},  -- 32 pink
 }
 
--- Build 0..1 palette
-Palette.colors = {}
-for i, c in ipairs(COLORS_RAW) do
-    Palette.colors[i] = { c[1]/255, c[2]/255, c[3]/255, 1 }
+-- Variant B: Warm / sepia-shifted Atari palette
+local COLORS_WARM = {
+    {  0,   0,   0},  {  76,  68,  56},  { 156, 144, 128},  { 240, 232, 216},
+    { 120,  24,   0},  { 184,  56,   8},  { 240, 100,  24},  { 252, 160,  64},
+    { 148,  48,   0},  { 200,  88,   8},  { 252, 136,  32},  { 252, 196,  88},
+    { 148,  84,   0},  { 212, 140,  32},  { 252, 196,  60},  { 252, 240, 124},
+    {   8,  72,  16},  {  24, 136,  16},  {  84, 196,  40},  { 160, 228, 112},
+    {   0,  60,  56},  {   8, 124, 120},  {  64, 192, 164},  { 140, 232, 204},
+    {   8,  28,  96},  {  28,  76, 160},  {  68, 136, 216},  { 136, 192, 244},
+    {  80,   8, 108},  { 144,  48, 164},  { 200, 104, 212},  { 236, 168, 244},
+}
+
+-- Variant C: Cool / blue-shifted CRT phosphor palette
+local COLORS_COOL = {
+    {  0,   0,   4},  {  60,  64,  76},  { 136, 144, 160},  { 228, 236, 244},
+    {  88,  16,  24},  { 152,  44,  32},  { 212,  84,  48},  { 244, 144,  80},
+    { 116,  36,  16},  { 172,  72,  24},  { 232, 120,  48},  { 244, 180,  96},
+    { 120,  68,  16},  { 184, 124,  40},  { 228, 180,  64},  { 244, 228, 128},
+    {   0,  88,  24},  {   8, 156,  24},  {  68, 216,  56},  { 144, 244, 120},
+    {   0,  76,  80},  {   0, 144, 148},  {  48, 212, 188},  { 124, 244, 220},
+    {   0,  40, 124},  {  16,  92, 192},  {  52, 152, 240},  { 120, 208, 252},
+    {  64,   0, 136},  { 128,  36, 192},  { 184,  88, 236},  { 224, 152, 252},
+}
+
+-- All variant tables (indexed by variant ID)
+local VARIANT_TABLES = {
+    COLORS_RAW,   -- 1 = default
+    COLORS_WARM,  -- 2 = warm
+    COLORS_COOL,  -- 3 = cool
+}
+
+Palette.VARIANT_NAMES = { "DEFAULT", "WARM", "COOL" }
+Palette.VARIANT_COUNT = #VARIANT_TABLES
+
+local currentVariant = 1
+
+-- Build 0..1 palette from a raw table
+local function buildColors(raw)
+    local cols = {}
+    for i, c in ipairs(raw) do
+        cols[i] = { c[1]/255, c[2]/255, c[3]/255, 1 }
+    end
+    return cols
 end
+
+-- Build 0..1 palette
+Palette.colors = buildColors(COLORS_RAW)
 Palette.count = #Palette.colors
 
 -- Transparent "color" index
 Palette.TRANSPARENT = 0
+
+-- Set palette variant (1..VARIANT_COUNT)
+function Palette.setVariant(id)
+    id = math.max(1, math.min(#VARIANT_TABLES, id or 1))
+    currentVariant = id
+    Palette.colors = buildColors(VARIANT_TABLES[id])
+    Palette.count = #Palette.colors
+end
+
+function Palette.getVariant()
+    return currentVariant
+end
 
 -- Get RGBA table for a palette index (0 = transparent)
 function Palette.get(idx)

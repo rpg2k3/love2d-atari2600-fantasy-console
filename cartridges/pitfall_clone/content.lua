@@ -1,0 +1,5 @@
+return {
+    sprites = {},
+    tiles = {},
+    music = {},
+}

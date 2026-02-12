@@ -48,6 +48,10 @@ Config.MODE_EDITOR = "editor"
 -- Debug
 Config.DEBUG_OVERLAY = false
 Config.SHOW_HELP     = false
+Config.GAMEPAD_DEBUG = false
+
+-- Gamepad
+Config.STICK_DEADZONE = 0.4
 
 -- Level paths
 Config.LEVELS_DIR     = "save/levels"
@@ -62,5 +66,14 @@ Config.CARTS_DIR          = "cartridges"
 Config.CART_SAVE_DIR      = "save/carts"
 Config.DEFAULT_LEVELS_DIR = "save/levels"
 Config.CONTENT_SAVE_PATH  = "save/content.lua"
+Config.EXPORTS_DIR        = "save/exports"
+
+-- System settings persistence
+Config.SYSTEM_DIR         = "save/system"
+Config.SETTINGS_PATH      = "save/system/settings.lua"
+
+-- OS states
+Config.MODE_SPLASH    = "splash"
+Config.MODE_INSERTING = "inserting"
 
 return Config

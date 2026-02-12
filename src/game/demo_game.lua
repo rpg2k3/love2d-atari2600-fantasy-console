@@ -400,8 +400,7 @@ function Demo.update(dt)
         camera:update(dt)
     end
 
-    -- Music update
-    Music.update(dt)
+    -- Music update is handled globally by App.update
 end
 
 -- ============================================================

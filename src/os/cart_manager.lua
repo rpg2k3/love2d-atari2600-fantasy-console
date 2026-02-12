@@ -235,4 +235,22 @@ function CartManager.getCurrentName()
     return nil
 end
 
+-- ============================================================
+-- Get set of existing cartridge directory IDs (for import collision checks)
+-- ============================================================
+function CartManager.getCartIds()
+    local ids = {}
+    local ok, items = pcall(love.filesystem.getDirectoryItems, Config.CARTS_DIR)
+    if ok and items then
+        for _, dir in ipairs(items) do
+            local dirPath = Config.CARTS_DIR .. "/" .. dir
+            local info = love.filesystem.getInfo(dirPath)
+            if info and info.type == "directory" then
+                ids[dir] = true
+            end
+        end
+    end
+    return ids
+end
+
 return CartManager
